@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rentora - Smart Home Renting Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .property-card:hover {
+            transform: translateY(-5px);
+            transition: transform 0.3s ease;
+        }
+        .map-container {
+            height: 400px;
+            width: 100%;
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        #mobile-menu {
+            transition: transform 0.3s ease;
+            transform: translateX(-100%);
+        }
+        #mobile-menu.show {
+            transform: translateX(0);
+        }
+        .tabs-container .tab {
+            cursor: pointer;
+        }
+        .tabs-container .tab.active {
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Custom file upload button */
+        .custom-file-upload {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 1rem;
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            background-color: #f8fafc;
+            transition: all 0.3s ease;
+        }
+        .custom-file-upload:hover {
+            background-color: #f1f5f9;
+            border-color: #93c5fd;
+        }
+        /* Preview image container */
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .image-preview {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .remove-image {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-blue-600">Rentora</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="#" class="text-gray-600 hover:text-blue-600">Home</a>
+                    <a href="#" class="text-gray-600 hover:text-blue-600">Search</a>
+                    <a href="#" id="list-property-nav" class="text-gray-600 hover:text-blue-600">List Property</a>
+                    <div class="relative group">
+                        <button class="text-gray-600 hover:text-blue-600 flex items-center">
+                            <span>For Landlords</span>
+                            <i class="bi bi-chevron-down ml-1"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg hidden group-hover:block z-10">
+                            <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-blue-100">Dashboard</a>
+                            <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-blue-100">Add Property</a>
+                            <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-blue-100">Manage Listings</a>
+                            <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-blue-100">View Inquiries</a>
+                        </div>
+                    </div>
+                    <button onclick="openModal('loginModal')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign In</button>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-gray-600">
+                        <i class="bi bi-list text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-blue-600">Rentora</h2>
+                <button id="close-menu-button" class="text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <ul class="space-y-4">
+                <li><a href="#" class="block text-gray-600 hover:text-blue-600">Home</a></li>
+                <li><a href="#" class="block text-gray-600 hover:text-blue-600">Search</a></li>
+                <li><a href="#" id="list-property-mobile-nav" class="block text-gray-600 hover:text-blue-600">List Property</a></li>
+                <li>
+                    <button class="flex items-center justify-between w-full text-gray-600 hover:text-blue-600" onclick="toggleDropdown()">
+                        <span>For Landlords</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <ul id="landlord-dropdown" class="hidden pl-4 mt-2 space-y-2">
+                        <li><a href="#" class="block text-gray-600 hover:text-blue-600">Dashboard</a></li>
+                        <li><a href="#" class="block text-gray-600 hover:text-blue-600">Add Property</a></li>
+                        <li><a href="#" class="block text-gray-600 hover:text-blue-600">Manage Listings</a></li>
+                        <li><a href="#" class="block text-gray-600 hover:text-blue-600">View Inquiries</a></li>
+                    </ul>
+                </li>
+                <li><button onclick="openModal('loginModal')" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign In</button></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="main-content">
+        <!-- Hero Section -->
+        <div class="bg-blue-600 text-white py-16">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center">
+                    <h2 class="text-4xl font-bold mb-4">Find Your Perfect Home</h2>
+                    <p class="text-xl mb-8">Search from thousands of rental properties across the country</p>
+                    <div class="bg-white rounded-lg p-4 max-w-3xl mx-auto">
+                        <div class="flex flex-wrap gap-4">
+                            <input type="text" placeholder="Location" class="flex-1 p-2 border rounded min-w-[200px] text-gray-700">
+                            <select class="p-2 border rounded min-w-[150px] text-gray-700">
+                                <option value="">Property Type</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="house">House</option>
+                                <option value="condo">Condo</option>
+                                <option value="townhouse">Townhouse</option>
+                                <option value="villa">Villa</option>
+                            </select>
+                            <input type="number" placeholder="Max Price" class="p-2 border rounded min-w-[150px] text-gray-700">
+                            <button id="advanced-search-btn" class="text-blue-600 underline">Advanced Search</button>
+                            <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Search</button>
+                        </div>
+                        <div id="advanced-search" class="hidden mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Bedrooms</label>
+                                <select class="w-full p-2 border rounded text-gray-700">
+                                    <option value="">Any</option>
+                                    <option value="1">1+</option>
+                                    <option value="2">2+</option>
+                                    <option value="3">3+</option>
+                                    <option value="4">4+</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Bathrooms</label>
+                                <select class="w-full p-2 border rounded text-gray-700">
+                                    <option value="">Any</option>
+                                    <option value="1">1+</option>
+                                    <option value="2">2+</option>
+                                    <option value="3">3+</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Availability</label>
+                                <input type="date" class="w-full p-2 border rounded text-gray-700">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Min Area (sqft)</label>
+                                <input type="number" placeholder="Min Area" class="w-full p-2 border rounded text-gray-700">
+                            </div>
+                            <div class="col-span-1 md:col-span-2">
+                                <label class="block text-gray-700 text-sm font-medium mb-1">Amenities</label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Parking
+                                    </label>
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Pet Friendly
+                                    </label>
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Furnished
+                                    </label>
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Air Conditioning
+                                    </label>
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Gym
+                                    </label>
+                                    <label class="flex items-center text-gray-700">
+                                        <input type="checkbox" class="mr-2">
+                                        Pool
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Featured Properties -->
+        <div class="max-w-7xl mx-auto px-4 py-16">
+            <h3 class="text-2xl font-bold mb-8">Featured Properties</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Property Card 1 -->
+                <div class="property-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="relative">
+                        <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994" alt="Property" class="w-full h-48 object-cover">
+                        <span class="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-medium">Featured</span>
+                    </div>
+                    <div class="p-4">
+                        <h4 class="text-xl font-semibold mb-2">Modern Apartment</h4>
+                        <p class="text-gray-600 mb-2"><i class="bi bi-geo-alt mr-1"></i>123 Main St, City</p>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-blue-600 font-bold text-xl">$1,500/mo</span>
+                            <div class="flex">
+                                <i class="bi bi-star-fill text-yellow-400 mr-1"></i>
+                                <span class="text-gray-700">4.8 (24 reviews)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-gray-500 mb-4">
+                            <span><i class="bi bi-building mr-1"></i> 2 Beds</span>
+                            <span><i class="bi bi-droplet mr-1"></i> 2 Baths</span>
+                            <span><i class="bi bi-square mr-1"></i> 1000 sqft</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="px-3 py-2 bg-white border border-blue-600 rounded text-blue-600 hover:bg-blue-50">
+                                <i class="bi bi-heart mr-1"></i> Save
+                            </button>
+                            <button onclick="viewProperty(1)" class="px-3 py-2 bg-blue-600 rounded text-white hover:bg-blue-700">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Card 2 -->
+                <div class="property-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9" alt="Property" class="w-full h-48 object-cover">
+                    <div class="p-4">
+                        <h4 class="text-xl font-semibold mb-2">Cozy Townhouse</h4>
+                        <p class="text-gray-600 mb-2"><i class="bi bi-geo-alt mr-1"></i>456 Park Ave, City</p>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-blue-600 font-bold text-xl">$1,800/mo</span>
+                            <div class="flex">
+                                <i class="bi bi-star-fill text-yellow-400 mr-1"></i>
+                                <span class="text-gray-700">4.5 (18 reviews)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-gray-500 mb-4">
+                            <span><i class="bi bi-building mr-1"></i> 3 Beds</span>
+                            <span><i class="bi bi-droplet mr-1"></i> 2 Baths</span>
+                            <span><i class="bi bi-square mr-1"></i> 1500 sqft</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="px-3 py-2 bg-white border border-blue-600 rounded text-blue-600 hover:bg-blue-50">
+                                <i class="bi bi-heart mr-1"></i> Save
+                            </button>
+                            <button onclick="viewProperty(2)" class="px-3 py-2 bg-blue-600 rounded text-white hover:bg-blue-700">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Card 3 -->
+                <div class="property-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1565953554309-d181306db7b5" alt="Property" class="w-full h-48 object-cover">
+                    <div class="p-4">
+                        <h4 class="text-xl font-semibold mb-2">Luxury Condo</h4>
+                        <p class="text-gray-600 mb-2"><i class="bi bi-geo-alt mr-1"></i>789 Ocean Blvd, City</p>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-blue-600 font-bold text-xl">$2,200/mo</span>
+                            <div class="flex">
+                                <i class="bi bi-star-fill text-yellow-400 mr-1"></i>
+                                <span class="text-gray-700">4.9 (32 reviews)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-gray-500 mb-4">
+                            <span><i class="bi bi-building mr-1"></i> 2 Beds</span>
+                            <span><i class="bi bi-droplet mr-1"></i> 2 Baths</span>
+                            <span><i class="bi bi-square mr-1"></i> 1200 sqft</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="px-3 py-2 bg-white border border-blue-600 rounded text-blue-600 hover:bg-blue-50">
+                                <i class="bi bi-heart mr-1"></i> Save
+                            </button>
+                            <button onclick="viewProperty(3)" class="px-3 py-2 bg-blue-600 rounded text-white hover:bg-blue-700">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-8">
+                <button class="bg-white border border-blue-600 text-blue-600 px-6 py-2 rounded-lg hover:bg-blue-50">
+                    View All Properties
+                </button>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="max-w-7xl mx-auto px-4 py-16">
+            <h3 class="text-2xl font-bold mb-8">Find Properties on Map</h3>
+            <div id="map" class="map-container rounded-lg shadow-md"></div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                <div class="flex items-center">
+                    <i class="bi bi-geo-alt-fill text-blue-600 mr-2"></i>
+                    <span>Click on markers to see property details</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="bi bi-cursor-fill text-blue-600 mr-2"></i>
+                    <span>Drag to explore different neighborhoods</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="bi bi-plus-circle-fill text-blue-600 mr-2"></i>
+                    <span>Use zoom controls for better view</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="bg-gray-100 py-16">
+            <div class="max-w-7xl mx-auto px-4">
+                <h3 class="text-2xl font-bold mb-8 text-center">Why Choose Rentora?</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-shield-check text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Verified Listings</h4>
+                        <p class="text-gray-600">All our properties are verified for authenticity and safety, giving you peace of mind when finding your next home.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-chat-dots text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Direct Communication</h4>
+                        <p class="text-gray-600">Chat directly with property owners and get answers to all your questions without any intermediaries.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-cash-stack text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Secure Payments</h4>
+                        <p class="text-gray-600">Our secure payment system protects both tenants and landlords throughout the rental process.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-calendar-check text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Easy Scheduling</h4>
+                        <p class="text-gray-600">Book property visits or virtual tours with just a few clicks and manage your appointments efficiently.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-file-earmark-text text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Digital Agreements</h4>
+                        <p class="text-gray-600">Generate and sign rental agreements electronically, making the paperwork process simple and faster.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                        <i class="bi bi-star text-4xl text-blue-600 mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Trusted Reviews</h4>
+                        <p class="text-gray-600">Read authentic reviews from previous tenants to make informed decisions about your potential new home.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <div class="py-16 max-w-7xl mx-auto px-4">
+            <h3 class="text-2xl font-bold mb-8 text-center">How Rentora Works</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                        <i class="bi bi-search text-2xl text-blue-600"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold mb-2">Search</h4>
+                    <p class="text-gray-600 text-center">Browse thousands of listings with detailed filters to find your ideal home.</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                        <i class="bi bi-house-door text-2xl text-blue-600"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold mb-2">Tour</h4>
+                    <p class="text-gray-600 text-center">Schedule in-person or virtual tours directly through our platform.</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                        <i class="bi bi-key text-2xl text-blue-600"></i>
+                    </div>
+                    <h4 class="text-xl font-semibold mb-2">Rent</h4>
+                    <p class="text-gray-600 text-center">Apply, sign agreements, and pay securely all in one place.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonials Section -->
+        <div class="bg-gray-100 py-16">
+            <div class="max-w-7xl mx-auto px-4">
+                <h3 class="text-2xl font-bold mb-8 text-center">What Our Users Say</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="flex mb-4">
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                        </div>
+                        <p class="text-gray-600 mb-4">"Rentora made finding my apartment so easy. The search filters helped me narrow down exactly what I needed, and I could schedule viewings right away."</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center mr-3">
+                                <span class="font-bold text-blue-700">JD</span>
+                            </div>
+                            <div>
+                                <p class="font-medium">John Doe</p>
+                                <p class="text-gray-500 text-sm">Tenant</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="flex mb-4">
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                        </div>
+                        <p class="text-gray-600 mb-4">"As a landlord, Rentora has simplified my rental process. I can easily manage multiple properties, screen tenants, and collect rent all in one place."</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center mr-3">
+                                <span class="font-bold text-green-700">SM</span>
+                            </div>
+                            <div>
+                                <p class="font-medium">Sarah Miller</p>
+                                <p class="text-gray-500 text-sm">Landlord</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <div class="flex mb-4">
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-fill text-yellow-400"></i>
+                            <i class="bi bi-star-half text-yellow-400"></i>
+                        </div>
+                        <p class="text-gray-600 mb-4">"The map interface was a game-changer for me. I could easily see which properties were close to my office and in safe neighborhoods."</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center mr-3">
+                                <span class="font-bold text-purple-700">AJ</span>
+                            </div>
+                            <div>
+                                <p class="font-medium">Alex Johnson</p>
+                                <p class="text-gray-500 text-sm">Tenant</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download App Section -->
+        <div class="py-16 max-w-7xl mx-auto px-4">
+            <div class="bg-blue-600 rounded-xl text-white p-8 flex flex-col md:flex-row items-center">
+                <div class="md:w-1/2 mb-6 md:mb-0">
+                    <h3 class="text-3xl font-bold mb-4">Get the Rentora Mobile App</h3>
+                    <p class="mb-6">Search, tour, and rent properties on the go. Our mobile app makes finding your next home even easier.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button class="bg-black text-white px-4 py-2 rounded-lg flex items-center hover:bg-gray-900">
+                            <i class="bi bi-apple text-2xl mr-2"></i>
+                            <div class="text-left">
+                                <div class="text-xs">Download on the</div>
+                                <div class="font-semibold">App Store</div>
+                            </div>
+                        </button>
+                        <button class="bg-black text-white px-4 py-2 rounded-lg flex items-center hover:bg-gray-900">
+                            <i class="bi bi-google-play text-2xl mr-2"></i>
+                            <div class="text-left">
+                                <div class="text-xs">Get it on</div>
+                                <div class="font-semibold">Google Play</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div class="md:w-1/2 flex justify-center">
+                    <div class="w-64 h-96 bg-white rounded-3xl shadow-xl relative overflow-hidden">
+                        <div class="absolute top-0 w-full h-6 bg-black rounded-t-3xl"></div>
+                        <div class="bg-blue-100 h-full mt-6 flex items-center justify-center">
+                            <div class="text-blue-600 text-center">
+                                <i class="bi bi-houses text-5xl mb-2"></i>
+                                <p class="font-semibold">Rentora App</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Listing Form (Initially Hidden) -->
+    <div id="property-listing-section" class="max-w-7xl mx-auto px-4 py-12 hidden">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">List Your Property</h2>
+            <p class="text-gray-600">Fill out the form below to list your property on Rentora</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form id="property-listing-form">
+                <!-- Basic Information -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Basic Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Property Title*</label>
+                            <input type="text" id="property-title" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Modern 2-Bedroom Apartment" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Property Type*</label>
+                            <select id="property-type" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Select property type</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="house">House</option>
+                                <option value="condo">Condo</option>
+                                <option value="townhouse">Townhouse</option>
+                                <option value="villa">Villa</option>
+                                <option value="studio">Studio</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 font-medium mb-2">Description*</label>
+                            <textarea id="property-description" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="5" placeholder="Describe your property..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Location -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Location</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-gray-700 font-medium mb-2">Address*</label>
+                            <input type="text" id="property-address" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Street address" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">City*</label>
+                            <input type="text" id="property-city" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">State/Province*</label>
+                            <input type="text" id="property-state" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Postal Code*</label>
+                            <input type="text" id="property-postal" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Country*</label>
+                            <input type="text" id="property-country" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Details -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Property Details</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Price ($/month)*</label>
+                            <input type="number" id="property-price" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="$ 0.00" min="0" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Bedrooms*</label>
+                            <select id="property-bedrooms" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Select</option>
+                                <option value="0">Studio</option>
+                                <option value="1">1 Bedroom</option>
+                                <option value="2">2 Bedrooms</option>
+                                <option value="3">3 Bedrooms</option>
+                                <option value="4">4 Bedrooms</option>
+                                <option value="5+">5+ Bedrooms</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Bathrooms*</label>
+                            <select id="property-bathrooms" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">Select</option>
+                                <option value="1">1 Bathroom</option>
+                                <option value="1.5">1.5 Bathrooms</option>
+                                <option value="2">2 Bathrooms</option>
+                                <option value="2.5">2.5 Bathrooms</option>
+                                <option value="3">3 Bathrooms</option>
+                                <option value="3+">3+ Bathrooms</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Square Feet</label>
+                            <input type="number" id="property-sqft" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min="0">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Available From*</label>
+                            <input type="date" id="property-available-date" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Minimum Lease (months)</label>
+                            <input type="number" id="property-min-lease" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min="1" value="12">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Amenities -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Amenities</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-aircon" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Air Conditioning</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-heating" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Heating</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-washer" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Washer</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-dryer" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Dryer</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-kitchen" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Kitchen</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-parking" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Parking</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-wifi" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Wifi</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-tv" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">TV</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-pool" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Pool</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-gym" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Gym</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-elevator" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Elevator</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-furnished" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Furnished</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-pets" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Pet Friendly</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-security" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Security System</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="amenity-balcony" class="form-checkbox h-5 w-5 text-blue-600">
+                                <span class="ml-2">Balcony</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Photos -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Photos</h3>
+                    
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">Upload high-quality photos to showcase your property (at least 3 photos recommended)</p>
+                        
+                        <label class="custom-file-upload">
+                            <input type="file" id="property-photos" class="hidden" accept="image/*" multiple>
+                            <div class="text-center">
+                                <i class="bi bi-cloud-arrow-up text-blue-600 text-3xl mb-2"></i>
+                                <p class="font-medium">Drag and drop files here</p>
+                                <p class="text-sm text-gray-500">or click to browse files</p>
+                            </div>
+                        </label>
+                        
+                        <div id="image-preview-container" class="image-preview-container"></div>
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 pb-2 border-b">Contact Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Contact Name*</label>
+                            <input type="text" id="contact-name" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Phone Number*</label>
+                            <input type="tel" id="contact-phone" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Email*</label>
+                            <input type="email" id="contact-email" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Preferred Contact Method</label>
+                            <select id="contact-method" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="phone">Phone</option>
+                                <option value="email">Email</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Terms and Submission -->
+                <div class="mb-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="terms-agree" class="form-checkbox h-5 w-5 text-blue-600" required>
+                        <span class="ml-2">I agree to the <a href="#" class="text-blue-600 hover:underline">Terms and Conditions</a> and <a href="#" class="text-blue-600 hover:underline">Privacy Policy</a></span>
+                    </label>
+                </div>
+                
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <button type="button" id="back-to-home" class="bg-white border border-blue-600 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50">
+                        <i class="bi bi-arrow-left mr-2"></i> Back to Home
+                    </button>
+                    
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <button type="button" id="save-draft-btn" class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300">
+                            Save as Draft
+                        </button>
+                        
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                            List Property
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h5 class="text-xl font-bold mb-4">Rentora</h5>
+                    <p class="text-gray-400">Find your perfect rental home with ease. Rentora connects property owners with tenants through a secure, user-friendly platform.</p>
+                    <div class="mt-4">
+                        <p class="text-gray-400"><i class="bi bi-envelope mr-2"></i>support@rentora.com</p>
+                        <p class="text-gray-400"><i class="bi bi-telephone mr-2"></i>(555) 123-4567</p>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-bold mb-4">Quick Links</h5>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">About Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Contact</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Terms of Service</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">FAQs</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-bold mb-4">For Landlords</h5>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">List Property</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Landlord Dashboard</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Pricing</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Resources</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Success Stories</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-bold mb-4">Connect With Us</h5>
+                    <div class="flex space-x-4 mb-4">
+                        <a href="#" class="bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-blue-600">
+                            <i class="bi bi-facebook"></i>
+                        </a>
+                        <a href="#" class="bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-blue-400">
+                            <i class="bi bi-twitter"></i>
+                        </a>
+                        <a href="#" class="bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-pink-600">
+                            <i class="bi bi-instagram"></i>
+                        </a>
+                        <a href="#" class="bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-blue-700">
+                            <i class="bi bi-linkedin"></i>
+                        </a>
+                    </div>
+                    <h5 class="font-bold mb-2">Subscribe to Our Newsletter</h5>
+                    <div class="flex">
+                        <input type="email" placeholder="Your email" class="p-2 w-full rounded-l text-gray-800">
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-700 text-gray-400 text-sm text-center">
+                <p>&copy; 2023 Rentora. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900 opacity-50" onclick="closeModal('loginModal')"></div>
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md z-10 overflow-hidden">
+            <div class="tabs-container flex border-b">
+                <div class="tab active py-3 px-6 font-medium" data-tab="login">Login</div>
+                <div class="tab py-3 px-6 font-medium" data-tab="register">Register</div>
+                <div class="tab py-3 px-6 font-medium" data-tab="type">Account Type</div>
+            </div>
+            
+            <!-- Login Tab -->
+            <div id="login" class="tab-content active p-6">
+                <h3 class="text-xl font-bold mb-4">Welcome Back</h3>
+                <form>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                        <input type="email" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Password</label>
+                        <input type="password" class="w-full p-2 border rounded" required>
+                        <div class="flex justify-end mt-1">
+                            <a href="#" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Sign In</button>
+                </form>
+                <div class="mt-6 flex items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="px-3 text-gray-500 text-sm">Or continue with</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+                <div class="mt-6 grid grid-cols-3 gap-3">
+                    <button class="flex justify-center py-2 border rounded-lg hover:bg-gray-50">
+                        <i class="bi bi-google text-red-500"></i>
+                    </button>
+                    <button class="flex justify-center py-2 border rounded-lg hover:bg-gray-50">
+                        <i class="bi bi-facebook text-blue-600"></i>
+                    </button>
+                    <button class="flex justify-center py-2 border rounded-lg hover:bg-gray-50">
+                        <i class="bi bi-apple"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Register Tab -->
+            <div id="register" class="tab-content p-6">
+                <h3 class="text-xl font-bold mb-4">Create Your Account</h3>
+                <form>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">First Name</label>
+                            <input type="text" class="w-full p-2 border rounded" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">Last Name</label>
+                            <input type="text" class="w-full p-2 border rounded" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
+                        <input type="email" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
+                        <input type="tel" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Password</label>
+                        <input type="password" class="w-full p-2 border rounded" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-medium mb-2">Confirm Password</label>
+                        <input type="password" class="w-full p-2 border rounded" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Create Account</button>
+                </form>
+            </div>
+
+            <!-- Account Type Tab -->
+            <div id="type" class="tab-content p-6">
+                <h3 class="text-xl font-bold mb-4">Choose Account Type</h3>
+                <p class="text-gray-600 mb-6">Select the type of account you want to create</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="border rounded-lg p-4 cursor-pointer hover:bg-blue-50 hover:border-blue-600">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-person-circle text-4xl text-blue-600"></i>
+                        </div>
+                        <h4 class="text-center font-semibold">I'm a Tenant</h4>
+                        <p class="text-center text-sm text-gray-500 mt-2">Looking to rent a property</p>
+                    </div>
+                    <div class="border rounded-lg p-4 cursor-pointer hover:bg-blue-50 hover:border-blue-600">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-house-door text-4xl text-blue-600"></i>
+                        </div>
+                        <h4 class="text-center font-semibold">I'm a Landlord</h4>
+                        <p class="text-center text-sm text-gray-500 mt-2">Looking to list properties</p>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Continue</button>
+                </div>
+            </div>
+
+            <div class="absolute top-4 right-4">
+                <button onclick="closeModal('loginModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Detail Modal -->
+    <div id="propertyModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-gray-900 opacity-50" onclick="closeModal('propertyModal')"></div>
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl z-10 overflow-y-auto max-h-[90vh]">
+            <div class="relative">
+                <div class="flex overflow-x-auto">
+                    <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994" alt="Property" class="w-full h-64 object-cover">
+                </div>
+                <div class="absolute top-4 right-4 flex space-x-2">
+                    <button class="bg-white rounded-full p-2 text-gray-700 hover:text-blue-600">
+                        <i class="bi bi-heart"></i>
+                    </button>
+                    <button class="bg-white rounded-full p-2 text-gray-700 hover:text-blue-600">
+                        <i class="bi bi-share"></i>
+                    </button>
+                    <button onclick="closeModal('propertyModal')" class="bg-white rounded-full p-2 text-gray-700 hover:text-red-600">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-2xl font-bold">Modern Apartment</h3>
+                        <p class="text-blue-600 font-bold text-xl">$1,500/mo</p>
+                    </div>
+                    <p class="text-gray-600"><i class="bi bi-geo-alt mr-1"></i>123 Main St, City</p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gray-100 p-3 rounded-md text-center">
+                        <i class="bi bi-building text-blue-600 mb-1"></i>
+                        <p class="font-semibold">2 Bedrooms</p>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-md text-center">
+                        <i class="bi bi-droplet text-blue-600 mb-1"></i>
+                        <p class="font-semibold">2 Bathrooms</p>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-md text-center">
+                        <i class="bi bi-square text-blue-600 mb-1"></i>
+                        <p class="font-semibold">1000 sqft</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-bold mb-2">Description</h4>
+                    <p class="text-gray-600">
+                        This beautifully renovated modern apartment offers comfortable living in a prime location. 
+                        Featuring hardwood floors, stainless steel appliances, and ample natural light. 
+                        The building includes secure entry, on-site laundry, and is pet-friendly.
+                    </p>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-bold mb-2">Amenities</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            Air Conditioning
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            In-unit Laundry
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            Dishwasher
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            Parking
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            Pet Friendly
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                            Fitness Center
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="text-lg font-bold mb-2">Location</h4>
+                    <div id="property-map" class="h-40 bg-gray-200 rounded-lg"></div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-bold mb-2">Available From</h4>
+                    <p class="text-gray-600">August 15, 2023</p>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-between gap-4">
+                    <div class="flex items-center bg-gray-100 p-4 rounded-lg">
+                        <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center mr-3">
+                            <span class="font-bold text-blue-700">JD</span>
+                        </div>
+                        <div>
+                            <p class="font-medium">Listed by John Davis</p>
+                            <div class="flex items-center">
+                                <i class="bi bi-star-fill text-yellow-400 mr-1"></i>
+                                <span>4.9 (42 reviews)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex-1 bg-white border border-blue-600 text-blue-600 p-3 rounded-lg hover:bg-blue-50">
+                            <i class="bi bi-chat-dots mr-2"></i> Message
+                        </button>
+                        <button class="flex-1 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+                            <i class="bi bi-calendar-check mr-2"></i> Schedule Tour
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mobile menu functionality
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMenuButton = document.getElementById('close-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.add('show');
+        });
+
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.remove('show');
+        });
+
+        // Dropdown functionality for mobile menu
+        function toggleDropdown() {
+            const dropdown = document.getElementById('landlord-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Advanced search toggle
+        const advancedSearchBtn = document.getElementById('advanced-search-btn');
+        const advancedSearch = document.getElementById('advanced-search');
+
+        advancedSearchBtn.addEventListener('click', () => {
+            advancedSearch.classList.toggle('hidden');
+        });
+
+        // Modal functionality
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Tab functionality in modals
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                
+                // Make tab active
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show tab content
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Property card click functionality
+        function viewProperty(id) {
+            openModal('propertyModal');
+            // Here you would typically fetch property details based on the ID
+            console.log(`Viewing property with ID: ${id}`);
+        }
+
+        // List Property functionality
+        const listPropertyNavLink = document.getElementById('list-property-nav');
+        const listPropertyMobileLink = document.getElementById('list-property-mobile-nav');
+        const mainContent = document.getElementById('main-content');
+        const propertyListingSection = document.getElementById('property-listing-section');
+        const backToHomeBtn = document.getElementById('back-to-home');
+
+        function showPropertyForm() {
+            mainContent.classList.add('hidden');
+            propertyListingSection.classList.remove('hidden');
+            // Close mobile menu if open
+            mobileMenu.classList.remove('show');
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        function hidePropertyForm() {
+            propertyListingSection.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        listPropertyNavLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPropertyForm();
+        });
+
+        listPropertyMobileLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPropertyForm();
+        });
+
+        backToHomeBtn.addEventListener('click', () => {
+            hidePropertyForm();
+        });
+
+        // Form submission handler
+        const propertyListingForm = document.getElementById('property-listing-form');
+        propertyListingForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Collect form data
+            const formData = {
+                title: document.getElementById('property-title').value,
+                propertyType: document.getElementById('property-type').value,
+                description: document.getElementById('property-description').value,
+                address: document.getElementById('property-address').value,
+                city: document.getElementById('property-city').value,
+                state: document.getElementById('property-state').value,
+                postalCode: document.getElementById('property-postal').value,
+                country: document.getElementById('property-country').value,
+                price: document.getElementById('property-price').value,
+                bedrooms: document.getElementById('property-bedrooms').value,
+                bathrooms: document.getElementById('property-bathrooms').value,
+                sqft: document.getElementById('property-sqft').value,
+                availableFrom: document.getElementById('property-available-date').value,
+                minLease: document.getElementById('property-min-lease').value,
+                // Collect amenities
+                amenities: {
+                    airConditioning: document.getElementById('amenity-aircon').checked,
+                    heating: document.getElementById('amenity-heating').checked,
+                    washer: document.getElementById('amenity-washer').checked,
+                    dryer: document.getElementById('amenity-dryer').checked,
+                    kitchen: document.getElementById('amenity-kitchen').checked,
+                    parking: document.getElementById('amenity-parking').checked,
+                    wifi: document.getElementById('amenity-wifi').checked,
+                    tv: document.getElementById('amenity-tv').checked,
+                    pool: document.getElementById('amenity-pool').checked,
+                    gym: document.getElementById('amenity-gym').checked,
+                    elevator: document.getElementById('amenity-elevator').checked,
+                    furnished: document.getElementById('amenity-furnished').checked,
+                    petFriendly: document.getElementById('amenity-pets').checked,
+                    security: document.getElementById('amenity-security').checked,
+                    balcony: document.getElementById('amenity-balcony').checked,
+                },
+                // Contact info
+                contactName: document.getElementById('contact-name').value,
+                contactPhone: document.getElementById('contact-phone').value,
+                contactEmail: document.getElementById('contact-email').value,
+                contactMethod: document.getElementById('contact-method').value,
+            };
+
+            console.log('Property submitted:', formData);
+            // MongoDB would store the property data here
+            
+            // Simulate successful submission
+            alert('Your property has been successfully listed! It will be reviewed by our team shortly.');
+            
+            // Reset form and return to home
+            propertyListingForm.reset();
+            hidePropertyForm();
+        });
+
+        // Save draft functionality
+        document.getElementById('save-draft-btn').addEventListener('click', () => {
+            alert('Your property listing has been saved as a draft. You can complete it later from your dashboard.');
+        });
+
+        // Image upload functionality
+        const fileInput = document.getElementById('property-photos');
+        const previewContainer = document.getElementById('image-preview-container');
+
+        fileInput.addEventListener('change', function() {
+            // Clear existing previews
+            previewContainer.innerHTML = '';
+            
+            // Create new previews
+            const files = this.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                if (!file.type.startsWith('image/')) continue;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'image-preview';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = 'Property image';
+                    
+                    const removeBtn = document.createElement('div');
+                    removeBtn.className = 'remove-image';
+                    removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                    removeBtn.onclick = function() {
+                        previewDiv.remove();
+                    };
+                    
+                    previewDiv.appendChild(img);
+                    previewDiv.appendChild(removeBtn);
+                    previewContainer.appendChild(previewDiv);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            // In a real app, we would now use Cloudinary to upload the images
+            console.log('Images would be uploaded to Cloudinary for storage and optimization');
+        });
+
+        // Initialize map when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize main map
+            const map = L.map('map').setView([40.7128, -74.0060], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add property markers
+            const properties = [
+                { lat: 40.7128, lng: -74.0060, title: 'Modern Apartment', price: '$1,500/mo', id: 1 },
+                { lat: 40.7200, lng: -74.0100, title: 'Cozy Townhouse', price: '$1,800/mo', id: 2 },
+                { lat: 40.7150, lng: -73.9950, title: 'Luxury Condo', price: '$2,200/mo', id: 3 }
+            ];
+            
+            properties.forEach(property => {
+                const marker = L.marker([property.lat, property.lng]).addTo(map);
+                
+                marker.bindPopup(`
+                    <div class="text-center">
+                        <h3 class="font-bold">${property.title}</h3>
+                        <p class="text-blue-600 font-semibold">${property.price}</p>
+                        <button onclick="viewProperty(${property.id})" class="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">View</button>
+                    </div>
+                `);
+            });
+            
+            // Initialize property detail map if modal is open
+            if (document.getElementById('property-map')) {
+                const propertyMap = L.map('property-map').setView([40.7128, -74.0060], 14);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(propertyMap);
+                
+                L.marker([40.7128, -74.0060]).addTo(propertyMap);
+            }
+        });
+
+        // Search functionality
+        document.querySelector('button.bg-blue-600.text-white.px-6.py-2.rounded-lg').addEventListener('click', function() {
+            const location = document.querySelector('input[type="text"]').value;
+            const propertyType = document.querySelector('select').value;
+            const maxPrice = document.querySelector('input[type="number"]').value;
+            
+            // Add your search logic here
+            console.log('Searching for:', { location, propertyType, maxPrice });
+
+            // In a real implementation, this would query a database like MongoDB
+            alert(`Searching for properties in ${location || 'any location'} 
+                  of type ${propertyType || 'any type'} 
+                  with max price ${maxPrice || 'any price'}`);
+        });
+
+        // Simulate backend connection with MongoDB and Cloudinary
+        console.log('Connected to MongoDB database for property data storage');
+        console.log('Connected to Cloudinary for property image storage and optimization');
+
+        // Heart button functionality (save property)
+        document.querySelectorAll('.property-card button:first-of-type').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent triggering the card click
+                const icon = this.querySelector('i');
+                if (icon.classList.contains('bi-heart')) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill', 'text-red-500');
+                } else {
+                    icon.classList.remove('bi-heart-fill', 'text-red-500');
+                    icon.classList.add('bi-heart');
+                }
+            });
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
